@@ -2,6 +2,10 @@ package com.codepath.android.lollipopexercise.adapters;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.support.v7.graphics.Palette;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,10 +14,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.animation.GlideAnimation;
+import com.bumptech.glide.request.target.SimpleTarget;
 import com.codepath.android.lollipopexercise.R;
+import com.codepath.android.lollipopexercise.activities.DetailsActivity;
 import com.codepath.android.lollipopexercise.models.Contact;
 
 import java.util.List;
+
+import static com.codepath.android.lollipopexercise.activities.DetailsActivity.EXTRA_CONTACT;
 
 // Provide the underlying view for an individual list item.
 public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.VH> {
@@ -37,11 +46,37 @@ public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.VH> {
 
     // Display data at the specified position
     @Override
-    public void onBindViewHolder(VH holder, int position) {
+    public void onBindViewHolder(final VH holder, int position) {
         Contact contact = mContacts.get(position);
         holder.rootView.setTag(contact);
         holder.tvName.setText(contact.getName());
-        Glide.with(mContext).load(contact.getThumbnailDrawable()).centerCrop().into(holder.ivProfile);
+
+        SimpleTarget<Bitmap> target = new SimpleTarget<Bitmap>() {
+            @Override
+            public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation) {
+                // TODO 1. Insert the bitmap into the profile image view
+                holder.ivProfile.setImageBitmap(resource);
+
+                // TODO 2. Use generate() method from the Palette API to get the vibrant color from the bitmap
+                // Set the result as the background color for `R.id.vPalette` view containing the contact's name.
+                Palette palette = Palette.from(resource).generate();
+                Palette.Swatch vibrant = palette.getVibrantSwatch();
+                if (vibrant != null) {
+                    // Set the background color of a layout based on the vibrant color
+                    holder.rootView.findViewById(R.id.vPalette).setBackgroundColor(vibrant.getRgb());
+                }
+
+            }
+        };
+
+        // TODO: Clear the bitmap and the background color in adapter
+        holder.ivProfile.setImageBitmap(null);
+        holder.rootView.findViewById(R.id.vPalette).setBackgroundColor(Color.TRANSPARENT);
+
+        // Store the target into the tag for the profile to ensure target isn't garbage collected prematurely
+        holder.ivProfile.setTag(target);
+        // Instruct Picasso to load the bitmap into the target defined above
+        Glide.with(mContext).load(contact.getThumbnailDrawable()).asBitmap().centerCrop().into(target);
     }
 
     @Override
@@ -69,8 +104,9 @@ public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.VH> {
                 public void onClick(View v) {
                     final Contact contact = (Contact)v.getTag();
                     if (contact != null) {
-                        // Fire an intent when a contact is selected
-                        // Pass contact object in the bundle and populate details activity.
+                        Intent i = new Intent(mContext, DetailsActivity.class);
+                        i.putExtra(EXTRA_CONTACT, contact);
+                        mContext.startActivity(i);
                     }
                 }
             });
